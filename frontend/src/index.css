@@ -1,0 +1,20 @@
+/* index.css */
+@import "tailwindcss";
+
+@theme {
+  /* Midnight Coral Palette */
+  --color-bg: #121214;
+  --color-surface: #1C1C1F;
+  --color-primary: #FF6B5E;
+  --color-secondary: #FFB454;
+  --color-text: #F2F1ED;
+  --color-muted: #8A8A8E;
+}
+
+/* Optional: Set your base body styles */
+@layer base {
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-text);
+  }
+}

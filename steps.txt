@@ -1,0 +1,9 @@
+1. Navbar -> classy, glassmorphism, tranlucent, capsuled, modern. -> done
+2. Footer -> good Footer  -> done
+3. A fantastic 404 page  -> done
+
+Things to explore in this,
+1. Redux toolkit
+2. Global state management using Redux
+3. Redis for state management
+4. Chat feature
