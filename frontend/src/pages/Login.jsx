@@ -2,6 +2,13 @@ import { useState } from 'react';
 import axios from 'axios';
 import toast, { Toaster } from 'react-hot-toast';
 
+// 1. Import the hooks for Redux and React Router
+import { useDispatch } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
+
+// 2. Import the action we created in the authSlice
+import { setCredentials } from '../redux/authSlice';
+
 export default function Login() {
     const backendUrl = import.meta.env.VITE_backendUrl;
     const [formData, setFormData] = useState({
@@ -10,6 +17,10 @@ export default function Login() {
     });
 
     const [isLoading, setIsLoading] = useState(false);
+
+    // 3. Initialize the dispatch and navigate functions
+    const dispatch = useDispatch();
+    const navigate = useNavigate();
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -27,21 +38,18 @@ export default function Login() {
 
         try {
             const response = await axios.post(`${backendUrl}/api/auth/login`, formData, {
-                // Crucial: This ensures your httpOnly cookie token is received and 
-                // sent automatically on subsequent requests without manual token handling.
                 withCredentials: true,
             });
 
-            // The backend returns the user object without the password
             const loggedInUser = response.data;
+
+            dispatch(setCredentials(loggedInUser));
 
             toast.success(`Welcome back, ${loggedInUser.fullname || loggedInUser.username}!`, { id: toastId });
 
-            // TODO: Update your global state (Zustand/Redux/Context) here if you have one, 
-            // and redirect the user to the home feed.
+            navigate('/');
 
         } catch (error) {
-            // Catches the 404 "Invalid credentials" from your controller
             const errorMessage = error.response?.data || 'Login failed. Please try again.';
             toast.error(errorMessage, { id: toastId });
         } finally {
