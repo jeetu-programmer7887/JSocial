@@ -2,6 +2,11 @@ import { useState } from 'react';
 import axios from 'axios';
 import toast, { Toaster } from 'react-hot-toast';
 
+// 1. Import Redux and Router hooks
+import { useDispatch } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
+import { setCredentials } from '../redux/authSlice';
+
 export default function Register() {
   const [formData, setFormData] = useState({
     fullname: '',
@@ -11,7 +16,11 @@ export default function Register() {
   });
 
   const [isLoading, setIsLoading] = useState(false);
-  const backendUrl = import.meta.env.VITE_backendUrl;
+  const backendUrl = import.meta.env.VITE_backendUrl || '';
+
+  // 2. Initialize dispatch and navigate
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -25,27 +34,30 @@ export default function Register() {
     e.preventDefault();
     setIsLoading(true);
 
-    // Show a loading toast that we can update later
     const toastId = toast.loading('Creating your account...');
 
     try {
-      const response = await axios.post(`${backendUrl}/api/auth/register`, formData, {
+
+      await axios.post(`${backendUrl}/api/auth/register`, formData, {
         withCredentials: true,
       });
 
-      if (response) {
-        console.log(response);
-      }
+      const loginResponse = await axios.post(`${backendUrl}/api/auth/login`, {
+        username: formData.username,
+        password: formData.password
+      }, {
+        withCredentials: true,
+      });
 
-      // If we reach here, the status is 200 OK
+      const loggedInUser = loginResponse.data;
+
+      dispatch(setCredentials(loggedInUser));
+
       toast.success('Welcome to JSocial!', { id: toastId });
 
-      // Reset form on success
-      setFormData({ fullname: '', username: '', email: '', password: '' });
+      navigate('/');
 
     } catch (error) {
-      // Axios automatically throws an error for 400/500 status codes.
-      // Your backend sends the error string directly in res.json("...")
       const errorMessage = error.response?.data || 'Registration failed. Please try again.';
       toast.error(errorMessage, { id: toastId });
     } finally {
@@ -55,12 +67,10 @@ export default function Register() {
 
   return (
     <div className="flex-1 w-full flex items-center justify-center bg-bg text-text px-4 py-12 selection:bg-primary selection:text-bg">
-      {/* Required for react-hot-toast */}
       <Toaster position="top-center" reverseOrder={false} />
 
-      {/* Translucent Glassmorphism Card */}
       <div className="w-full max-w-md bg-surface/60 backdrop-blur-xl border border-white/5 rounded-3xl p-8 shadow-[0_8px_32px_rgba(0,0,0,0.4)] transition-all duration-300">
-
+        
         {/* Header / Branding */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center rounded-xl bg-linear-to-tr from-primary to-secondary px-6 py-2 mb-4 shadow-lg shadow-primary/20 hover:scale-105 transition-transform">
@@ -143,7 +153,7 @@ export default function Register() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full mt-4 bg-linear-to-r from-primary to-secondary text-bg font-bold text-sm py-3.5 rounded-xl transition-all duration-300 hover:opacity-90 active:scale-[0.98] shadow-lg shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full cursor-pointer mt-4 bg-linear-to-r from-primary to-secondary text-bg font-bold text-sm py-3.5 rounded-xl transition-all duration-300 hover:opacity-90 active:scale-[0.98] shadow-lg shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? 'Processing...' : 'Sign Up'}
           </button>
