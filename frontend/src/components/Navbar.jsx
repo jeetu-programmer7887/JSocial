@@ -103,7 +103,7 @@ export default function Navbar() {
                             // --- SHOW IF LOGGED IN ---
                             <div className="flex items-center gap-3">
                                 {/* User Avatar & Profile Link */}
-                                <Link to={`/profile/${user?.username}`} className="flex items-center gap-2 group cursor-pointer hover:bg-white/5 p-1 pr-3 rounded-full transition-colors">
+                                <Link to={`/profile`} className="flex items-center gap-2 group cursor-pointer hover:bg-white/5 p-1 pr-3 rounded-full transition-colors">
                                     <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-linear-to-tr from-primary to-secondary flex items-center justify-center text-bg font-bold text-xs shadow-sm">
                                         {/* Extracts the first letter of their username or fullname */}
                                         {user?.fullname?.charAt(0).toUpperCase() || user?.username?.charAt(0).toUpperCase() || 'U'}

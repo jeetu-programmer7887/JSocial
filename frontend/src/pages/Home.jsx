@@ -3,27 +3,21 @@ import PostFeed from '../components/PostFeed';
 
 export default function Home() {
     return (
-        // flex & justify-center keeps the feed perfectly in the middle of the screen
-        <div className="w-full flex justify-center px-4 sm:px-6 py-8 selection:bg-primary selection:text-bg min-h-screen">
+        // 🚨 Main container expanded to max-w-7xl to give the post grid room to breathe
+        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-8 selection:bg-primary selection:text-bg min-h-screen flex flex-col gap-10">
             
-            {/* Main Feed Container - max-w-2xl prevents it from stretching too wide on desktops */}
-            <div className="w-full max-w-2xl space-y-6">
-                
-                {/* 1. Create Post Widget */}
+            {/* 1. Create Post Widget */}
+            {/* 🚨 Constrained to max-w-2xl and centered so the input box doesn't stretch across the whole monitor */}
+            <div className="w-full max-w-2xl mx-auto">
                 <CreatePost />
-
-                {/* 2. Feed Timeline (This will map all posts from the user and the people they follow) */}
-                <PostFeed />
-
-                {/* 3. Minimal Footer at the bottom of the feed */}
-                <div className="pt-8 pb-4 text-center text-xs text-muted flex flex-wrap justify-center gap-x-4 gap-y-2 border-t border-white/5">
-                    <a href="#terms" className="hover:underline">Terms</a>
-                    <a href="#privacy" className="hover:underline">Privacy</a>
-                    <a href="#cookies" className="hover:underline">Cookies</a>
-                    <span>&copy; {new Date().getFullYear()} JSocial.</span>
-                </div>
-
             </div>
+
+            {/* 2. Feed Timeline */}
+            {/* 🚨 Unconstrained! Takes the full width of the 7xl parent so the 3-column grid looks perfect */}
+            <div className="w-full">
+                <PostFeed />
+            </div>
+
         </div>
     );
 }

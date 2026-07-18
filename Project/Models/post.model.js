@@ -9,29 +9,38 @@ const commentSchema = new mongoose.Schema({
     text: {
         type: String,
         required: true,
-        trim: true
+        trim: true,
+        maxLength: 500
     }
-}, { timestamps: true })
+}, { timestamps: true });
 
 const postSchema = new mongoose.Schema({
+    user: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        required: true
+    },
     caption: {
         type: String,
-        required: true
+        required: true,
+        trim: true,
+        maxLength: 2200
     },
     imgUrl: {
         type: String,
         required: true,
     },
-    like: {
-        type: [
-            {
-                type: mongoose.Schema.Types.ObjectId,
-                ref: "User"
-            }
-        ],
-        default: []
+    publicId: {
+        type: String,
+        required: true,
     },
+    likes: [
+        {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User"
+        }
+    ],
     comments: [commentSchema]
-}, { timestamps: true })
+}, { timestamps: true });
 
 export const Post = mongoose.model("Post", postSchema);
