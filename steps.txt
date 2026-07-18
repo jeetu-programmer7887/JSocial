@@ -3,7 +3,15 @@
 3. A fantastic 404 page  -> done
 
 Things to explore in this,
-1. Redux toolkit
-2. Global state management using Redux
-3. Redis for state management
+1. Redux toolkit -> done
+2. Global state management using Redux -> done
+3. Redis for state management 
 4. Chat feature
+
+
+1. Redirect the user to normal user's page where we can see basic info and follow and unfollow button just like instagram.
+
+in the Explore section 
+1. add suggested users
+2. add search option
+3. Not able to manage the post on profile

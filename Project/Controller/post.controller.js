@@ -1,27 +1,37 @@
 import { Post } from "../Models/post.model.js";
+import { User } from "../Models/user.model.js";
 import { uploadToCloudinary } from "../utils/cloudinary.js";
+import { v2 as cloudinary } from "cloudinary";
 
 export const createPost = async (req, res) => {
     try {
         const { caption } = req.body;
+        const userId = req.user._id;
 
-        if (!caption) {
-            return res.status(400).json({ success: false, message: "Caption is required." });
-        }
-        if (!req.file) {
-            return res.status(400).json({ success: false, message: "An image file is required." });
-        }
+        if (!caption) return res.status(400).json({ success: false, message: "Caption is required." });
+        if (!req.file) return res.status(400).json({ success: false, message: "An image file is required." });
 
-        const cloudinaryResult = await uploadToCloudinary(req.file.buffer);
+        const b64 = Buffer.from(req.file.buffer).toString("base64");
+        const dataURI = `data:${req.file.mimetype};base64,${b64}`;
+
+        const cloudinaryResult = await cloudinary.uploader.upload(dataURI, {
+            folder: "jsocial/posts"
+        });
 
         const imgUrl = cloudinaryResult.secure_url;
+        const publicId = cloudinaryResult.public_id;
 
-        const newPost = await Post.create({
+
+        let newPost = await Post.create({
+            user: userId,
             caption,
             imgUrl,
-            like: [],
+            publicId,
+            likes: [],
             comments: []
         });
+
+        await newPost.populate("user", "fullname username profileImg");
 
         return res.status(201).json({
             success: true,
@@ -39,91 +49,147 @@ export const createPost = async (req, res) => {
     }
 };
 
-export const likePost = async (req, res) => {
+export const getAllPost = async (req, res) => {
     try {
-        const { id: postId } = req.params;
-        const userId = req.user?._id;
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
 
-        if (!userId) {
-            return res.status(401).json({ message: "Unauthenticated" });
-        }
+        const skip = (page - 1) * limit;
 
-        const post = await Post.findById(postId);
+        const allPosts = await Post.find({})
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
+            .populate({
+                path: "user",
+                select: "fullname username profileImg"
+            })
+            .populate({
+                path: "comments.user",
+                select: "fullname username profileImg"
+            });
 
-        if (!post) {
-            return res.status(404).json({ message: "Post not found" });
-        }
+        // Count total documents to know if there are more posts to fetch
+        const totalPosts = await Post.countDocuments();
+        const hasMore = skip + allPosts.length < totalPosts;
 
-        const likesArray = post.like || [];
-        const isLiked = likesArray.includes(userId.toString());
-
-        const updatedPost = await Post.findByIdAndUpdate(
-            postId,
-            [
-                {
-                    $set: {
-                        like: {
-                            $cond: [
-                                { $in: [userId, "$like"] },
-                                { $setDifference: ["$like", [userId]] },
-                                { $concatArrays: ["$like", [userId]] }
-                            ]
-                        }
-                    }
-                }
-            ],
-            {
-                new: true,
-                updatePipeline: true
-            }
-        );
-
-        res.status(200).json({
-            message: isLiked ? "Post unliked successfully" : "Post liked successfully",
-            updatedPost
+        return res.status(200).json({
+            success: true,
+            allPosts,
+            hasMore
         });
 
     } catch (error) {
-        console.error("Error while toggling post like:", error);
-        res.status(500).json({ message: "Something went wrong" });
+        console.log("Error in getAllPost: ", error.message);
+        return res.status(500).json({ success: false, message: "Internal server error" });
+    }
+}
+
+export const toggleLike = async (req, res) => {
+    try {
+        const postId = req.params.id;
+        const userId = req.user._id; // ProtectedRoute guarantees this exists
+
+        const post = await Post.findById(postId);
+        if (!post) return res.status(404).json({ success: false, message: "Post not found" });
+
+        const isLiked = post.likes.includes(userId);
+
+        if (isLiked) {
+            // Unliking
+            await Post.findByIdAndUpdate(postId, { $pull: { likes: userId } });
+            return res.status(200).json({ success: true, action: "unliked", userId });
+        } else {
+            // Liking
+            await Post.findByIdAndUpdate(postId, { $push: { likes: userId } });
+            return res.status(200).json({ success: true, action: "liked", userId });
+        }
+    } catch (error) {
+        console.error("Error in toggleLike:", error.message);
+        return res.status(500).json({ success: false, message: "Internal server error" });
     }
 };
 
-export const getAllPost = async (req, res) => {
+export const addComment = async (req, res) => {
     try {
-        const allPosts = await Post.find({})
+        const postId = req.params.id;
+        const userId = req.user._id;
+        const { text } = req.body;
 
-        return res.status(200).json({ message: "All post returned", allPosts })
+        if (!text) return res.status(400).json({ success: false, message: "Comment text is required" });
+
+        const post = await Post.findById(postId);
+        if (!post) return res.status(404).json({ success: false, message: "Post not found" });
+
+        const newComment = { user: userId, text };
+
+        // Push new comment and save
+        post.comments.push(newComment);
+        await post.save();
+
+        // 🚀 PRO-TIP: Populate the newly added comment so the frontend can display the user's avatar instantly
+        await post.populate("comments.user", "fullname username profileImg");
+
+        // The new comment will be the last one in the array
+        const populatedComment = post.comments[post.comments.length - 1];
+
+        return res.status(201).json({ success: true, message: "Comment added", comment: populatedComment });
     } catch (error) {
-        console.log("Error in getAllPost : ", error.message)
+        console.error("Error in addComment:", error.message);
+        return res.status(500).json({ success: false, message: "Internal server error" });
     }
-}
+};
 
-export const commentPost = async (req, res) => {
+export const deletePost = async (req, res) => {
     try {
-        let { text } = req.body
-        let postId = req.params.id
-        let userId = req.user._id
+        // 1. Grab the post ID from the URL parameters
+        const postId = req.params.id;
 
-        const post = await Post.findById(postId)
+        // 2. Grab the logged-in user's ID (provided by your ProtectedRoute middleware)
+        const userId = req.user._id;
+
+        // 3. Find the post in the database
+        const post = await Post.findById(postId);
 
         if (!post) {
-            return res.json({ message: "post not found" })
+            return res.status(404).json({
+                success: false,
+                message: "Post not found"
+            });
         }
 
-        if (!text) {
-            return res.json({ message: "text field is required" })
+        // 4. SECURITY CHECK: Verify the logged-in user is the actual creator of the post
+        if (post.user.toString() !== userId.toString()) {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized: You can only delete your own posts"
+            });
         }
 
-        const updatedPost = await Post.findByIdAndUpdate(postId, {
-            comments: [
-                { text, userId }
-            ]
-        }, { new: true })
+        // --- Cloudinary Image Deletion ---
+        if (post.publicId) {
+            await cloudinary.uploader.destroy(post.publicId);
+        }
 
-        res.json({ message: "Comment added", updatedPost })
+        // 5. Delete the post from the database
+        await Post.findByIdAndDelete(postId);
+
+        // 6. (Optional but recommended) Remove the post ID from the user's `posts` array if you are storing it there
+        await User.findByIdAndUpdate(userId, {
+            $pull: { posts: postId }
+        });
+
+        // 7. Send success response
+        return res.status(200).json({
+            success: true,
+            message: "Post deleted successfully"
+        });
 
     } catch (error) {
-        console.log("Error in comment", error.message)
+        console.error("Error in deletePost controller: ", error.message);
+        return res.status(500).json({
+            success: false,
+            message: "Internal Server Error"
+        });
     }
-}
+};

@@ -11,11 +11,14 @@ import Login from './pages/Login';
 import NotFound from './pages/NotFound';
 import Profile from './pages/Profile';
 import Home from './pages/Home';
+import OtherUser from './components/OtherUser';
+import UserListPage from './components/UserListPage';
+import Explore from './pages/Explore';
 
 export default function App() {
   const dispatch = useDispatch();
   const backendUrl = import.meta.env.VITE_backendUrl || '';
-  
+
   // Loading state to prevent UI flashing before auth is confirmed
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
@@ -26,13 +29,13 @@ export default function App() {
         const response = await axios.get(`${backendUrl}/api/auth/me`, {
           withCredentials: true,
         });
-        
+
         // If successful, update Redux with fresh user data
         dispatch(setCredentials(response.data));
 
       } catch (error) {
         // If unauthorized (cookie expired/missing), wipe the frontend state
-        console.log("Session expired or unauthorized");
+        console.log("Session expired or unauthorized", error.message);
         dispatch(logout());
       } finally {
         setIsCheckingAuth(false);
@@ -61,20 +64,26 @@ export default function App() {
             Everything nested inside it will render where the <Outlet /> is.
         */}
         <Route path="/" element={<Layout />}>
-          
+
           {/* Default page (the feed) */}
           <Route index element={<Home />} />
-          
+
           {/* Auth pages */}
           <Route path="register" element={<Register />} />
           <Route path="login" element={<Login />} />
+          <Route path="profile" element={<Profile />} />
 
-          {/* Add the dynamic profile route! */}
-          <Route path="profile/:username" element={<Profile />} />
-          
+          {/* Add the dynamic routes! */}
+          <Route path="profile/:username" element={<OtherUser />} />
+          <Route path="/profile/:username/followers" element={<UserListPage />} />
+          <Route path="/profile/:username/following" element={<UserListPage />} />
+
+          {/* Other Pages */}
+          <Route path="explore" element={<Explore />} />
+
           {/* 404 Catch-all */}
-          <Route path="*" element={<NotFound/>} />
-          
+          <Route path="*" element={<NotFound />} />
+
         </Route>
       </Routes>
     </BrowserRouter>
