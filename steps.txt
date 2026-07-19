@@ -12,6 +12,12 @@ Things to explore in this,
 1. Redirect the user to normal user's page where we can see basic info and follow and unfollow button just like instagram.
 
 in the Explore section 
-1. add suggested users
-2. add search option
-3. Not able to manage the post on profile
+1. add suggested users -> done
+2. add search option -> done
+3. Not able to manage the post on profile -> done
+
+
+Now Final Features
+1. Alerts 
+2. Redis
+3. Chatting

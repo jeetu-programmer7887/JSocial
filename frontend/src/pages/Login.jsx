@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import axios from 'axios';
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 
 // 1. Import the hooks for Redux and React Router
 import { useDispatch } from 'react-redux';
@@ -59,7 +59,6 @@ export default function Login() {
 
     return (
         <div className="flex-1 w-full flex items-center justify-center py-12 bg-bg text-text px-4 selection:bg-primary selection:text-bg">
-            <Toaster position="top-center" reverseOrder={false} />
 
             {/* Translucent Glassmorphism Card */}
             <div className="w-full max-w-md bg-surface/60 backdrop-blur-xl border border-white/5 rounded-3xl p-8 shadow-[0_8px_32px_rgba(0,0,0,0.4)] transition-all duration-300">

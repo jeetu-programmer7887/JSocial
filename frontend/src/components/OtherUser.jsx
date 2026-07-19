@@ -131,7 +131,7 @@ export default function OtherUser() {
                                 <button
                                     onClick={handleFollowToggle}
                                     disabled={isActionLoading}
-                                    className={`font-bold px-8 py-2 rounded-xl transition-all text-sm w-full sm:w-auto disabled:opacity-50 active:scale-95 ${isFollowing
+                                    className={`font-bold px-8 py-2 cursor-pointer rounded-xl transition-all text-sm w-full sm:w-auto disabled:opacity-50 active:scale-95 ${isFollowing
                                         ? 'bg-white/10 hover:bg-white/20 text-text border border-white/10'
                                         : 'bg-primary hover:bg-primary/90 text-bg shadow-md shadow-primary/20'
                                         }`}

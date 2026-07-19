@@ -1,5 +1,7 @@
 import { User } from "../Models/user.model.js";
-import { Post } from "../Models/post.model.js"; // Adjust path to your Post model
+import { Post } from "../Models/post.model.js"; 
+import { Notification } from "../Models/notification.model.js";
+import { io, getReceiverSocketId } from "../socket/socket.js"; 
 
 export const FollowUnfollow = async (req, res) => {
     try {
@@ -8,7 +10,7 @@ export const FollowUnfollow = async (req, res) => {
         const otherUser = await User.findById(id);
 
         if (req.user._id.toString() === id.toString()) {
-            return res.status(400).json("You can't follow/unfollow yourself");
+            return res.status(400).json("You can't follow yourself");
         }
 
         if (!authUser || !otherUser) {
@@ -17,15 +19,39 @@ export const FollowUnfollow = async (req, res) => {
 
         const isFollowing = authUser.following.includes(id);
 
-        if (isFollowing) { 
-            // UNFOLLOW
-            await User.findByIdAndUpdate(authUser._id, { $pull: { following: id } }); 
-            await User.findByIdAndUpdate(id, { $pull: { followers: authUser._id } }); 
+        if (isFollowing) {
+            // UNFOLLOW LOGIC
+            await User.findByIdAndUpdate(authUser._id, { $pull: { following: id } });
+            await User.findByIdAndUpdate(id, { $pull: { followers: authUser._id } });
             return res.status(200).json("User Unfollowed Successfully!!!");
         } else {
-            // FOLLOW
-            await User.findByIdAndUpdate(authUser._id, { $push: { following: id } }); 
-            await User.findByIdAndUpdate(id, { $push: { followers: authUser._id } }); 
+            // FOLLOW LOGIC
+            await User.findByIdAndUpdate(authUser._id, { $push: { following: id } });
+            await User.findByIdAndUpdate(id, { $push: { followers: authUser._id } });
+
+            // Save notification to Database
+            const newNotification = new Notification({
+                sender: req.user._id,
+                recipient: id, 
+                type: "follow",
+            });
+            await newNotification.save();
+
+            // 👇 2. REAL-TIME SOCKET EMISSION
+            // Check if the user being followed is currently online
+            const receiverSocketId = getReceiverSocketId(id);
+            if (receiverSocketId) {
+                // If they are online, send them an event called "newNotification"
+                io.to(receiverSocketId).emit("newNotification", {
+                    type: "follow",
+                    message: `${authUser.username} started following you!`,
+                    sender: {
+                        username: authUser.username,
+                        profileImg: authUser.profileImg
+                    }
+                });
+            }
+
             return res.status(200).json("User Followed Successfully!!!");
         }
 
@@ -44,17 +70,17 @@ export const suggestedUser = async (req, res) => {
             {
                 $match: {
                     _id: {
-                        $ne: userId, 
-                        $nin: authUser.following 
+                        $ne: userId,
+                        $nin: authUser.following
                     }
                 }
             },
             {
-                $sample: { size: 4 } 
+                $sample: { size: 4 }
             },
             {
                 $project: {
-                    password: 0 
+                    password: 0
                 }
             }
         ]);
@@ -80,9 +106,9 @@ export const getUserProfile = async (req, res) => {
             .populate("following", "username profileImg");
 
         if (!user) {
-            return res.status(404).json({ 
-                success: false, 
-                message: "User not found" 
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
             });
         }
 
@@ -98,16 +124,16 @@ export const getUserProfile = async (req, res) => {
         };
 
         // 5. Send the successful response back to the frontend
-        return res.status(200).json({ 
-            success: true, 
-            profile 
+        return res.status(200).json({
+            success: true,
+            profile
         });
 
     } catch (error) {
         console.log("Error in fetching User details: ", error.message);
-        return res.status(500).json({ 
-            success: false, 
-            message: "Internal Server Error" 
+        return res.status(500).json({
+            success: false,
+            message: "Internal Server Error"
         });
     }
 }
@@ -116,7 +142,7 @@ export const getFollowers = async (req, res) => {
     try {
         const { username } = req.params;
         const user = await User.findOne({ username }).populate("followers", "fullname username profileImg");
-        
+
         if (!user) return res.status(404).json({ success: false, message: "User not found" });
 
         return res.status(200).json({ success: true, users: user.followers });
@@ -130,7 +156,7 @@ export const getFollowing = async (req, res) => {
     try {
         const { username } = req.params;
         const user = await User.findOne({ username }).populate("following", "fullname username profileImg");
-        
+
         if (!user) return res.status(404).json({ success: false, message: "User not found" });
 
         return res.status(200).json({ success: true, users: user.following });
@@ -140,11 +166,10 @@ export const getFollowing = async (req, res) => {
     }
 };
 
-// SEARCH USERS
 export const searchUsers = async (req, res) => {
     try {
         const { query } = req.query; // Grabbing the search term from the URL
-        
+
         // If the search bar is empty, return an empty array
         if (!query) {
             return res.status(200).json({ success: true, users: [] });
@@ -157,8 +182,8 @@ export const searchUsers = async (req, res) => {
                 { fullname: { $regex: query, $options: "i" } }
             ]
         })
-        .select("fullname username profileImg") // Only grab what we need for the UI
-        .limit(6); // Limit results so the dropdown doesn't get massive
+            .select("fullname username profileImg") // Only grab what we need for the UI
+            .limit(6); // Limit results so the dropdown doesn't get massive
 
         return res.status(200).json({ success: true, users });
     } catch (error) {

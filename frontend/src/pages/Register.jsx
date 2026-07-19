@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import axios from 'axios';
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 
 // 1. Import Redux and Router hooks
 import { useDispatch } from 'react-redux';
@@ -67,7 +67,6 @@ export default function Register() {
 
   return (
     <div className="flex-1 w-full flex items-center justify-center bg-bg text-text px-4 py-12 selection:bg-primary selection:text-bg">
-      <Toaster position="top-center" reverseOrder={false} />
 
       <div className="w-full max-w-md bg-surface/60 backdrop-blur-xl border border-white/5 rounded-3xl p-8 shadow-[0_8px_32px_rgba(0,0,0,0.4)] transition-all duration-300">
         
