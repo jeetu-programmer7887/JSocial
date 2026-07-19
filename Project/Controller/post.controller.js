@@ -1,7 +1,9 @@
+import { Notification } from "../Models/notification.model.js";
 import { Post } from "../Models/post.model.js";
 import { User } from "../Models/user.model.js";
 import { uploadToCloudinary } from "../utils/cloudinary.js";
 import { v2 as cloudinary } from "cloudinary";
+import { io, getReceiverSocketId } from "../socket/socket.js"; 
 
 export const createPost = async (req, res) => {
     try {
@@ -88,7 +90,7 @@ export const getAllPost = async (req, res) => {
 export const toggleLike = async (req, res) => {
     try {
         const postId = req.params.id;
-        const userId = req.user._id; // ProtectedRoute guarantees this exists
+        const userId = req.user._id;
 
         const post = await Post.findById(postId);
         if (!post) return res.status(404).json({ success: false, message: "Post not found" });
@@ -102,6 +104,32 @@ export const toggleLike = async (req, res) => {
         } else {
             // Liking
             await Post.findByIdAndUpdate(postId, { $push: { likes: userId } });
+
+            // Sending notification
+            if (post.user.toString() !== req.user._id.toString()) {
+                // 1. Save to database
+                const newNotification = new Notification({
+                    sender: req.user._id,
+                    recipient: post.user,
+                    type: "like",
+                    post: post._id
+                });
+                await newNotification.save();
+
+                // 2. REAL-TIME SOCKET EMISSION
+                const receiverSocketId = getReceiverSocketId(post.user.toString());
+                if (receiverSocketId) {
+                    io.to(receiverSocketId).emit("newNotification", {
+                        type: "like",
+                        message: `${req.user.username} liked your post!`,
+                        sender: {
+                            username: req.user.username,
+                            profileImg: req.user.profileImg
+                        }
+                    });
+                }
+            }
+
             return res.status(200).json({ success: true, action: "liked", userId });
         }
     } catch (error) {
@@ -127,7 +155,31 @@ export const addComment = async (req, res) => {
         post.comments.push(newComment);
         await post.save();
 
-        // 🚀 PRO-TIP: Populate the newly added comment so the frontend can display the user's avatar instantly
+        // Adding notification
+        if (post.user.toString() !== req.user._id.toString()) {
+            // 1. Save to database
+            const newNotification = new Notification({
+                sender: req.user._id,
+                recipient: post.user,
+                type: "comment",
+                post: post._id
+            });
+            await newNotification.save();
+
+            // 2. REAL-TIME SOCKET EMISSION
+            const receiverSocketId = getReceiverSocketId(post.user.toString());
+            if (receiverSocketId) {
+                io.to(receiverSocketId).emit("newNotification", {
+                    type: "comment",
+                    message: `${req.user.username} commented on your post!`,
+                    sender: {
+                        username: req.user.username,
+                        profileImg: req.user.profileImg
+                    }
+                });
+            }
+        }
+
         await post.populate("comments.user", "fullname username profileImg");
 
         // The new comment will be the last one in the array

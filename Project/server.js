@@ -1,15 +1,16 @@
-import express from "express"
+import express from "express" //(It's now handled in socket.js)
 import dotenv from "dotenv"
 import { ConnectDB } from "./utils/db.js"
 import AuthRouter from "./Routes/auth.route.js"
 import UserRouter from "./Routes/user.route.js"
 import PostRouter from './Routes/post.route.js'
+import NotificationRouter from './Routes/notification.route.js'
 import cookieParser from "cookie-parser"
 import cors from 'cors'
 
-dotenv.config()
+import { app, server } from "./socket/socket.js"; 
 
-const app = express()
+dotenv.config()
 
 const corsOptions = {
     origin: process.env.FRONTEND_URL,
@@ -30,10 +31,11 @@ app.get('/', (req, res) => {
 app.use("/api/auth", AuthRouter)
 app.use("/api/user", UserRouter)
 app.use("/api/post", PostRouter)
+app.use("/api/notifications", NotificationRouter)
 
 const port = process.env.PORT || 5000
 
-app.listen(port, () => {
+server.listen(port, () => {
     console.log(`Server is running on port ${port}`)
     ConnectDB()
 })
