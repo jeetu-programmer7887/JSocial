@@ -17,12 +17,15 @@ import OtherUser from './components/OtherUser';
 import UserListPage from './components/UserListPage';
 import Explore from './pages/Explore';
 import Alerts from './components/Alert';
+import ChatRoom from './components/ChatRoom';
+import Messages from './pages/Message';
+import { ProtectedRoute, GuestRoute } from '../src/components/RouteProtection'
 
 export default function App() {
   const dispatch = useDispatch();
-  // Grab the user from Redux to use their ID for the socket connection
+
+  // Grab the user from Redux to use their ID for the socket connection & route protection
   const { user } = useSelector((state) => state.auth);
-  // Change it to explicitly use 5000 as the fallback!
   const backendUrl = import.meta.env.VITE_backendUrl || 'http://localhost:3000';
 
   // Loading state to prevent UI flashing before auth is confirmed
@@ -32,16 +35,11 @@ export default function App() {
   useEffect(() => {
     const checkAuthStatus = async () => {
       try {
-        // Ping the backend to verify the httpOnly cookie
         const response = await axios.get(`${backendUrl}/api/auth/me`, {
           withCredentials: true,
         });
-
-        // If successful, update Redux with fresh user data
         dispatch(setCredentials(response.data));
-
       } catch (error) {
-        // If unauthorized (cookie expired/missing), wipe the frontend state
         console.log("Session expired or unauthorized", error.message);
         dispatch(logout());
       } finally {
@@ -56,7 +54,6 @@ export default function App() {
   useEffect(() => {
     let socket;
 
-    // Only connect if the user is successfully logged in
     if (user) {
       socket = io(backendUrl, {
         query: { userId: user._id },
@@ -74,7 +71,6 @@ export default function App() {
       });
     }
 
-    // Cleanup: Disconnect when the component unmounts or user logs out
     return () => {
       if (socket) {
         socket.close();
@@ -97,27 +93,24 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* The parent Route uses the Layout component. 
-            Everything nested inside it will render where the <Outlet /> is.
-        */}
         <Route path="/" element={<Layout />}>
 
-          {/* Default page (the feed) */}
+          {/* Public / Semi-Public Pages */}
           <Route index element={<Home />} />
-
-          {/* Auth pages */}
-          <Route path="register" element={<Register />} />
-          <Route path="login" element={<Login />} />
-          <Route path="profile" element={<Profile />} />
-
-          {/* Add the dynamic routes! */}
-          <Route path="profile/:username" element={<OtherUser />} />
-          <Route path="/profile/:username/followers" element={<UserListPage />} />
-          <Route path="/profile/:username/following" element={<UserListPage />} />
-
-          {/* Other Pages */}
           <Route path="explore" element={<Explore />} />
-          <Route path="notifications" element={<Alerts />} />
+          <Route path="profile/:username" element={<OtherUser />} />
+          <Route path="profile/:username/followers" element={<UserListPage />} />
+          <Route path="profile/:username/following" element={<UserListPage />} />
+
+          {/* Guest-Only Pages (Login / Register) */}
+          <Route path="register" element={<GuestRoute user={user}><Register /></GuestRoute>} />
+          <Route path="login" element={<GuestRoute user={user}><Login /></GuestRoute>} />
+
+          {/* Protected Pages (Require Login) */}
+          <Route path="profile" element={<ProtectedRoute user={user}><Profile /></ProtectedRoute>} />
+          <Route path="notifications" element={<ProtectedRoute user={user}><Alerts /></ProtectedRoute>} />
+          <Route path="messages" element={<ProtectedRoute user={user}><Messages /></ProtectedRoute>} />
+          <Route path="messages/:id" element={<ProtectedRoute user={user}><ChatRoom /></ProtectedRoute>} />
 
           {/* 404 Catch-all */}
           <Route path="*" element={<NotFound />} />

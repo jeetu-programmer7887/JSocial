@@ -3,7 +3,7 @@ import { Post } from "../Models/post.model.js";
 import { User } from "../Models/user.model.js";
 import { uploadToCloudinary } from "../utils/cloudinary.js";
 import { v2 as cloudinary } from "cloudinary";
-import { io, getReceiverSocketId } from "../socket/socket.js"; 
+import { io, getReceiverSocketId } from "../socket/socket.js";
 
 export const createPost = async (req, res) => {
     try {
@@ -116,8 +116,13 @@ export const toggleLike = async (req, res) => {
                 });
                 await newNotification.save();
 
-                // 2. REAL-TIME SOCKET EMISSION
+                //notification
                 const receiverSocketId = getReceiverSocketId(post.user.toString());
+                if (receiverSocketId) {
+                    io.to(receiverSocketId).emit("newNotification");
+                }
+
+                // 2. REAL-TIME SOCKET EMISSION
                 if (receiverSocketId) {
                     io.to(receiverSocketId).emit("newNotification", {
                         type: "like",
@@ -165,6 +170,13 @@ export const addComment = async (req, res) => {
                 post: post._id
             });
             await newNotification.save();
+
+            if (post.user.toString() !== req.user._id.toString()) {
+                const receiverSocketId = getReceiverSocketId(post.user.toString());
+                if (receiverSocketId) {
+                    io.to(receiverSocketId).emit("newNotification");
+                }
+            }
 
             // 2. REAL-TIME SOCKET EMISSION
             const receiverSocketId = getReceiverSocketId(post.user.toString());
