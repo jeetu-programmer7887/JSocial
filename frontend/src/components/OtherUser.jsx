@@ -196,37 +196,47 @@ export default function OtherUser() {
 
                     {/* User Info & Stats */}
                     <div className="flex flex-col flex-1 w-full items-center sm:items-start">
-                        <div className="flex flex-col sm:flex-row items-center gap-4 mb-6 w-full sm:w-auto">
-                            <h2 className="text-2xl font-bold text-text">@{profile.username}</h2>
-                            {isOwner ? (
-                                <button className="bg-white/10 hover:bg-white/20 text-text font-bold px-6 py-2 rounded-xl transition-colors text-sm w-full sm:w-auto">
-                                    Edit Profile
-                                </button>
-                            ) : (
+                        
+                        {/* 1. Main Header Row: Drops buttons to a new line on medium screens if needed */}
+                        <div className="flex flex-col xl:flex-row items-center sm:items-start xl:items-center gap-4 mb-6 w-full">
+                            
+                            <h2 className="text-2xl font-bold text-text shrink-0">@{profile.username}</h2>
+                            
+                            {/* 2. Button Group: Uses flex-wrap so buttons automatically adjust */}
+                            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 sm:gap-3 w-full xl:w-auto">
+                                {isOwner ? (
+                                    <button className="bg-white/10 cursor-pointer hover:bg-white/20 text-text font-bold px-5 sm:px-6 py-2 rounded-xl transition-colors text-sm whitespace-nowrap flex-1 sm:flex-initial">
+                                        Edit Profile
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={handleFollowToggle}
+                                        disabled={isActionLoading}
+                                        className={`font-bold px-5 sm:px-8 py-2 cursor-pointer rounded-xl transition-all text-sm whitespace-nowrap flex-1 sm:flex-initial disabled:opacity-50 active:scale-95 ${isFollowing
+                                            ? 'bg-white/10 hover:bg-white/20 text-text border border-white/10'
+                                            : 'bg-primary hover:bg-primary/90 text-bg shadow-md shadow-primary/20'
+                                            }`}
+                                    >
+                                        {isActionLoading ? '...' : (isFollowing ? 'Unfollow' : 'Follow')}
+                                    </button>
+                                )}
+                                
                                 <button
-                                    onClick={handleFollowToggle}
-                                    disabled={isActionLoading}
-                                    className={`font-bold px-8 py-2 cursor-pointer rounded-xl transition-all text-sm w-full sm:w-auto disabled:opacity-50 active:scale-95 ${isFollowing
-                                        ? 'bg-white/10 hover:bg-white/20 text-text border border-white/10'
-                                        : 'bg-primary hover:bg-primary/90 text-bg shadow-md shadow-primary/20'
-                                        }`}
+                                    onClick={() => navigate(`/messages/${profile._id}`)}
+                                    className="px-5 sm:px-6 py-2 cursor-pointer bg-secondary text-amber-800 font-bold rounded-full hover:bg-secondary/80 transition-colors text-sm whitespace-nowrap flex-1 sm:flex-initial"
                                 >
-                                    {isActionLoading ? '...' : (isFollowing ? 'Unfollow' : 'Follow')}
+                                    Message
                                 </button>
-                            )}
-                            <button
-                                onClick={() => navigate(`/messages/${profile._id}`)}
-                                className="px-6 py-2 bg-secondary text-amber-800 font-bold rounded-full hover:bg-secondary/80 transition-colors"
-                            >
-                                Message
-                            </button>
-                            <button
-                                onClick={() => handleShare(profile.username)}
-                                className="px-6 py-2 bg-secondary text-amber-800 font-bold rounded-full hover:bg-secondary/80 transition-colors"
-                            >
-                                <span className='lg:hidden'>Share Profile</span>
-                                <span className='hidden lg:block'>Share</span>
-                            </button>
+                                
+                                <button
+                                    onClick={() => handleShare(profile.username)}
+                                    className="px-5 sm:px-6 cursor-pointer py-2 bg-secondary text-amber-800 font-bold rounded-full hover:bg-secondary/80 transition-colors text-sm whitespace-nowrap flex-1 sm:flex-initial"
+                                >
+                                    <span className='lg:hidden'>Share</span>
+                                    <span className='hidden lg:inline'>Share Profile</span>
+                                </button>
+                            </div>
+
                         </div>
 
                         {/* Stats Row */}
@@ -305,13 +315,13 @@ export default function OtherUser() {
                     onClick={() => setSelectedPost(null)}
                 >
                     {/* Close Button */}
-                    <button className="absolute top-4 right-4 text-white hover:text-primary transition-colors p-2">
+                    <button className="absolute cursor-pointer top-4 right-4 text-white hover:text-primary transition-colors p-2">
                         <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                     </button>
 
                     <div
                         className="w-full max-w-5xl max-h-[90vh] bg-surface border border-white/10 rounded-2xl overflow-hidden flex flex-col md:flex-row shadow-2xl"
-                        onClick={(e) => e.stopPropagation()} // Prevents clicks inside modal from closing it
+                        onClick={(e) => e.stopPropagation()} 
                     >
                         {/* Left Side: Image */}
                         <div
