@@ -1,6 +1,6 @@
 import express from "express" //(It's now handled in socket.js)
 import dotenv from "dotenv"
-import { ConnectDB } from "./utils/db.js"
+import { connectDB } from "./utils/db.js"
 import AuthRouter from "./Routes/auth.route.js"
 import UserRouter from "./Routes/user.route.js"
 import PostRouter from './Routes/post.route.js'
@@ -39,5 +39,5 @@ const port = process.env.PORT || 5000
 
 server.listen(port, () => {
     console.log(`Server is running on port ${port}`)
-    ConnectDB()
+    connectDB()
 })
