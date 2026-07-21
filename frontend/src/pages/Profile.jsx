@@ -4,12 +4,16 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 import { setCredentials } from '../redux/authSlice';
 import SuggestedUsers from '../components/SuggestedUser';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { logout } from '../redux/authSlice';
+
 
 export default function Profile() {
   const { user } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
   const backendUrl = import.meta.env.VITE_backendUrl || '';
+  const navigate = useNavigate();
+
 
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -38,6 +42,24 @@ export default function Profile() {
     profileImg: '',
     coverImg: '',
   });
+
+      // 2. Handle Logout function
+    const handleLogout = async () => {
+        try {
+            // Optional: Call your backend logout route to clear the httpOnly cookie
+            await axios.get(`${backendUrl}/api/auth/logout`, { withCredentials: true });
+
+            // Clear the Redux store
+            dispatch(logout());
+            toast.success("Logged out successfully");
+            navigate('/login');
+        } catch (error) {
+            console.error("Logout failed", error);
+            // Even if backend fails, force frontend logout for safety
+            dispatch(logout());
+            navigate('/login');
+        }
+    };
 
   // --- FETCH USER POSTS ---
   useEffect(() => {
@@ -156,7 +178,7 @@ export default function Profile() {
 
         <div className="px-6 sm:px-10 pb-8 relative">
 
-          <div className="flex justify-between items-end -mt-12 sm:-mt-16 mb-4">
+         <div className="flex justify-between items-end -mt-12 sm:-mt-16 mb-4">
             <div
               className={`w-24 h-24 sm:w-32 sm:h-32 rounded-full border-4 border-surface bg-surface overflow-hidden relative z-10 shadow-xl ${isEditing ? 'cursor-pointer group' : ''}`}
               onClick={() => isEditing && profileInputRef.current?.click()}
@@ -176,27 +198,37 @@ export default function Profile() {
               )}
             </div>
 
-            <button
-              onClick={() => {
-                if (isEditing) {
-                  setFormData({
-                    fullname: user?.fullname || '',
-                    username: user?.username || '',
-                    email: user?.email || '',
-                    currentPass: '',
-                    newPass: '',
-                    profileImg: '',
-                    coverImg: ''
-                  });
-                  setProfilePreview(null);
-                  setCoverPreview(null);
-                }
-                setIsEditing(!isEditing);
-              }}
-              className="cursor-pointer mb-2 sm:mb-4 px-5 py-2 rounded-full text-xs sm:text-sm font-bold border border-white/10 hover:bg-white/5 transition-colors text-text z-20"
-            >
-              {isEditing ? 'Cancel Edit' : 'Edit Profile'}
-            </button>
+            {/* 👇 Wrapped both buttons in a flex container for perfect alignment 👇 */}
+            <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-4 z-20">
+              <button
+                onClick={handleLogout} // Make sure handleLogout is defined in this component!
+                className="cursor-pointer px-4 sm:px-5 py-2 rounded-full text-xs sm:text-sm font-bold border border-red-500/30 text-red-400 hover:bg-red-500/10 hover:border-red-500/50 transition-colors"
+              >
+                Logout
+              </button>
+
+              <button
+                onClick={() => {
+                  if (isEditing) {
+                    setFormData({
+                      fullname: user?.fullname || '',
+                      username: user?.username || '',
+                      email: user?.email || '',
+                      currentPass: '',
+                      newPass: '',
+                      profileImg: '',
+                      coverImg: ''
+                    });
+                    setProfilePreview(null);
+                    setCoverPreview(null);
+                  }
+                  setIsEditing(!isEditing);
+                }}
+                className="cursor-pointer px-4 sm:px-5 py-2 rounded-full text-xs sm:text-sm font-bold border border-white/10 hover:bg-white/5 transition-colors text-text"
+              >
+                {isEditing ? 'Cancel Edit' : 'Edit Profile'}
+              </button>
+            </div>
           </div>
 
           {!isEditing ? (

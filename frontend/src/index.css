@@ -9,6 +9,27 @@
   --color-secondary: #FFB454;
   --color-text: #F2F1ED;
   --color-muted: #8A8A8E;
+
+  /* 👇 Define the animation utility (creates the 'animate-heart-pop' class) */
+  --animate-heart-pop: heart-pop 1s ease-out forwards;
+}
+
+/* 👇 Define the actual keyframes using standard CSS */
+@keyframes heart-pop {
+  0% {
+    transform: scale(0);
+    opacity: 1;
+  }
+  25% {
+    transform: scale(1.2);
+  }
+  50% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(0);
+    opacity: 0;
+  }
 }
 
 /* Optional: Set your base body styles */

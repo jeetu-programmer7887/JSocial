@@ -1,7 +1,7 @@
 import { User } from "../Models/user.model.js";
-import { Post } from "../Models/post.model.js"; 
+import { Post } from "../Models/post.model.js";
 import { Notification } from "../Models/notification.model.js";
-import { io, getReceiverSocketId } from "../socket/socket.js"; 
+import { io, getReceiverSocketId } from "../socket/socket.js";
 
 export const FollowUnfollow = async (req, res) => {
     try {
@@ -32,16 +32,19 @@ export const FollowUnfollow = async (req, res) => {
             // Save notification to Database
             const newNotification = new Notification({
                 sender: req.user._id,
-                recipient: id, 
+                recipient: id,
                 type: "follow",
             });
             await newNotification.save();
 
-            // 👇 2. REAL-TIME SOCKET EMISSION
-            // Check if the user being followed is currently online
             const receiverSocketId = getReceiverSocketId(id);
+
             if (receiverSocketId) {
-                // If they are online, send them an event called "newNotification"
+                io.to(receiverSocketId).emit("newNotification");
+            }
+
+            // Check if the user being followed is currently online
+            if (receiverSocketId) {
                 io.to(receiverSocketId).emit("newNotification", {
                     type: "follow",
                     message: `${authUser.username} started following you!`,
@@ -63,33 +66,31 @@ export const FollowUnfollow = async (req, res) => {
 
 export const suggestedUser = async (req, res) => {
     try {
-        const userId = req.user._id;
-        const authUser = await User.findById(userId);
+        const pipeline = [];
 
-        const SuggestedUser = await User.aggregate([
-            {
+        if (req.user) {
+            pipeline.push({
                 $match: {
                     _id: {
-                        $ne: userId,
-                        $nin: authUser.following
+                        $ne: req.user._id,
+                        $nin: req.user.following || []
                     }
                 }
-            },
-            {
-                $sample: { size: 4 }
-            },
-            {
-                $project: {
-                    password: 0
-                }
-            }
-        ]);
+            });
+        }
 
-        return res.status(200).json({ message: "All users", SuggestedUser });
+        pipeline.push(
+            { $sample: { size: 4 } },
+            { $project: { password: 0 } }
+        );
+
+        const SuggestedUser = await User.aggregate(pipeline);
+
+        return res.status(200).json({ success: true, message: "Suggested users", SuggestedUser });
 
     } catch (error) {
         console.log("Error in suggested User controller", error.message);
-        return res.status(500).json("Internal Server Error");
+        return res.status(500).json({ success: false, message: "Internal Server Error" });
     }
 }
 
@@ -189,5 +190,30 @@ export const searchUsers = async (req, res) => {
     } catch (error) {
         console.error("Error in searchUsers: ", error.message);
         return res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
+};
+
+export const getUserById = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Find user and explicitly exclude the password field for security
+        const user = await User.findById(id.toString()).select("-password");
+
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found" });
+        }
+
+        return res.status(200).json({ success: true, user });
+
+    } catch (error) {
+        console.error("Error in getUserById:", error.message);
+
+        // If Mongoose throws an error because the ID string is structurally invalid
+        if (error.kind === 'ObjectId') {
+            return res.status(404).json({ success: false, message: "User not found" });
+        }
+
+        return res.status(500).json({ success: false, message: "Internal server error" });
     }
 };

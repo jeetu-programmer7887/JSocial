@@ -17,6 +17,8 @@ export default function PostFeed() {
     const [activeCommentBox, setActiveCommentBox] = useState(null);
     const [commentText, setCommentText] = useState("");
 
+    const [doubleTapHeart, setDoubleTapHeart] = useState(null);
+
     // --- 1. Fetch Posts & Deduplicate ---
     useEffect(() => {
         const fetchPosts = async () => {
@@ -80,8 +82,8 @@ export default function PostFeed() {
                     return {
                         ...post,
                         likes: hasLiked
-                            ? post.likes.filter(id => id !== user._id) 
-                            : [...post.likes, user._id]                
+                            ? post.likes.filter(id => id !== user._id)
+                            : [...post.likes, user._id]
                     };
                 }
                 return post;
@@ -90,7 +92,28 @@ export default function PostFeed() {
             await axios.post(`${backendUrl}/api/post/like/${postId}`, {}, { withCredentials: true });
         } catch (error) {
             toast.error("Failed to like post");
-            console.log("Error in liking : ", error)
+            console.log("Error in liking : ", error);
+        }
+    };
+
+    // --- 3.5 Handle Double Tap to Like ---
+    const handleDoubleTap = (postId, hasLiked) => {
+        if (!user) {
+            toast.error("Please log in to like posts!", { icon: '🔒', position: 'bottom-center' });
+            return;
+        }
+
+        // 1. Show the giant heart animation instantly
+        setDoubleTapHeart(postId);
+
+        // 2. Hide the giant heart after 1 second
+        setTimeout(() => {
+            setDoubleTapHeart(null);
+        }, 1000);
+
+        // 3. Only send the API request if they haven't ALREADY liked it
+        if (!hasLiked) {
+            handleLike(postId);
         }
     };
 
@@ -117,12 +140,30 @@ export default function PostFeed() {
                     return post;
                 }));
 
-                setCommentText(""); 
+                setCommentText("");
                 toast.success("Comment added!");
             }
         } catch (error) {
             toast.error(error.response?.data?.message || "Failed to post comment");
         }
+    };
+
+    // --- 5. Handle Share ---
+    const handleShare = (username) => {
+        // Construct the full URL pointing to this specific post
+        const postUrl = `${window.location.origin}/profile/${username}`;
+        
+        // Copy to clipboard
+        navigator.clipboard.writeText(postUrl)
+            .then(() => {
+                toast.success("Link copied to clipboard!", {
+                    icon: '🔗',
+                    position: 'bottom-center'
+                });
+            })
+            .catch(() => {
+                toast.error("Failed to copy link");
+            });
     };
 
     // --- Render: Empty State ---
@@ -142,10 +183,9 @@ export default function PostFeed() {
         );
     }
 
-  // --- Render: Feed ---
+    // --- Render: Feed ---
     return (
         <div className="flex flex-col gap-8 w-full max-w-7xl mx-auto">
-            {/* 🚨 UPDATED CONTAINER: Grid layout with responsive columns */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
                 {posts.map((post, index) => {
                     const isLastPost = posts.length === index + 1;
@@ -155,7 +195,6 @@ export default function PostFeed() {
                         <div
                             key={post._id}
                             ref={isLastPost ? lastPostElementRef : null}
-                            // Removed max-w classes here so the card naturally fills the grid column
                             className="bg-surface/80 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden shadow-xl flex flex-col w-full h-full"
                         >
                             {/* 1. Header: User Info */}
@@ -177,15 +216,31 @@ export default function PostFeed() {
                                 </Link>
                             </div>
 
-                            {/* 2. Body: Image (Adjusted object-fit for grid) */}
+                            {/* 2. Body: Image */}
                             {post.imgUrl && (
-                                <div className="w-full bg-black/90 relative flex items-center justify-center overflow-hidden border-y border-white/5 grow aspect-square">
-                                    <img 
-                                        src={post.imgUrl} 
-                                        alt="Post" 
-                                        className="w-full h-full object-cover" 
-                                        loading="lazy" 
+                                <div
+                                    className="w-full bg-black/90 relative flex items-center justify-center overflow-hidden border-y border-white/5 grow aspect-square cursor-pointer select-none group/image"
+                                    onDoubleClick={() => handleDoubleTap(post._id, hasLiked)}
+                                >
+                                    <img
+                                        src={post.imgUrl}
+                                        alt="Post"
+                                        className="w-full h-full object-cover transition-transform duration-500"
+                                        loading="lazy"
+                                        draggable="false" 
                                     />
+
+                                    {doubleTapHeart === post._id && (
+                                        <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+                                            <svg
+                                                className="w-32 h-32 text-primary drop-shadow-2xl animate-heart-pop"
+                                                viewBox="0 0 24 24"
+                                                fill="currentColor"
+                                            >
+                                                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                                            </svg>
+                                        </div>
+                                    )}
                                 </div>
                             )}
 
@@ -195,6 +250,7 @@ export default function PostFeed() {
                                 <button
                                     onClick={() => handleLike(post._id)}
                                     className="flex items-center gap-2 group transition-all cursor-pointer active:scale-90"
+                                    title="Like"
                                 >
                                     <svg className={`w-7 h-7 transition-colors ${hasLiked ? 'text-red-500 fill-red-500' : 'text-text group-hover:text-red-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
@@ -208,6 +264,7 @@ export default function PostFeed() {
                                 <button
                                     onClick={() => setActiveCommentBox(activeCommentBox === post._id ? null : post._id)}
                                     className="flex items-center gap-2 group transition-all"
+                                    title="Comment"
                                 >
                                     <svg className="w-7 h-7 text-text group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
@@ -215,6 +272,17 @@ export default function PostFeed() {
                                     <span className="text-sm font-bold text-text group-hover:text-primary">
                                         {post.comments?.length || 0}
                                     </span>
+                                </button>
+
+                                {/* Share Button */}
+                                <button
+                                    onClick={() => handleShare(post.user.username)}
+                                    className="flex items-center gap-2 group transition-all cursor-pointer active:scale-90"
+                                    title="Share Post"
+                                >
+                                    <svg className="w-6 h-6 text-text group-hover:text-primary transition-colors mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path>
+                                    </svg>
                                 </button>
                             </div>
 
@@ -279,7 +347,7 @@ export default function PostFeed() {
                                             disabled={!user || !commentText.trim()}
                                             className="text-primary text-sm font-bold hover:opacity-80 disabled:opacity-30 transition-opacity"
                                         >
-                                            Post
+                                            Send
                                         </button>
                                     </form>
                                 </div>
