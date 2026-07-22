@@ -1,4 +1,4 @@
-import express from "express" //(It's now handled in socket.js)
+import express from "express"
 import dotenv from "dotenv"
 import { connectDB } from "./utils/db.js"
 import AuthRouter from "./Routes/auth.route.js"
@@ -37,7 +37,14 @@ app.use("/api/messages", MessageRouter)
 
 const port = process.env.PORT || 5000
 
-server.listen(port, () => {
-    console.log(`Server is running on port ${port}`)
-    connectDB()
-})
+
+connectDB()
+    .then(() => {
+        server.listen(port, () => {
+            console.log(`Server is running on port ${port}`)
+        })
+    })
+    .catch((err) => {
+        console.error("Failed to connect to MongoDB. Server not started.", err)
+        process.exit(1)
+    })

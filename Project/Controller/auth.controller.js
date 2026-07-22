@@ -60,7 +60,7 @@ export const Login = async (req, res) => {
             return res.status(404).json("Invalid credentials")
         }
 
-        GenerateToken(user._id, res)
+        await GenerateToken(user._id, res)
 
         let loggedInuser = await User.findById(user._id).select("-password")
 
