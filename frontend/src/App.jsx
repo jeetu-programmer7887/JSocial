@@ -3,7 +3,8 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import axios from 'axios';
 import { useDispatch, useSelector } from 'react-redux';
 import { setCredentials, logout } from './redux/authSlice';
-import { io } from 'socket.io-client';
+// import { io } from 'socket.io-client';
+import { useSocket } from './Layout/SocketContext.jsx';
 import toast from 'react-hot-toast';
 
 // Import your layout and pages
@@ -20,15 +21,13 @@ import Alerts from './components/Alert';
 import ChatRoom from './components/ChatRoom';
 import Messages from './pages/Message';
 import { ProtectedRoute, GuestRoute } from '../src/components/RouteProtection'
+import PostPage from './pages/PostPage.jsx';
 
 export default function App() {
   const dispatch = useDispatch();
-
-  // Grab the user from Redux to use their ID for the socket connection & route protection
   const { user } = useSelector((state) => state.auth);
+  const { socket } = useSocket(); // ✅ reuse the single shared socket
   const backendUrl = import.meta.env.VITE_backendUrl || 'http://localhost:3000';
-
-  // Loading state to prevent UI flashing before auth is confirmed
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
   // --- 1. AUTHENTICATION CHECK ---
@@ -52,31 +51,18 @@ export default function App() {
 
   // --- 2. SOCKET.IO REAL-TIME NOTIFICATIONS ---
   useEffect(() => {
-    let socket;
+    if (!socket) return;
 
-    if (user) {
-      socket = io(backendUrl, {
-        query: { userId: user._id },
+    const handleNewNotification = (notification) => {
+      toast(notification.message, {
+        icon: notification.type === 'follow' ? '👤' : notification.type === 'like' ? '❤️' : '💬',
+        style: { borderRadius: '10px', background: '#FF6B5E', color: '#fff' },
       });
-
-      socket.on("newNotification", (notification) => {
-        toast(notification.message, {
-          icon: notification.type === 'follow' ? '👤' : notification.type === 'like' ? '❤️' : '💬',
-          style: {
-            borderRadius: '10px',
-            background: '#FF6B5E',
-            color: '#fff',
-          },
-        });
-      });
-    }
-
-    return () => {
-      if (socket) {
-        socket.close();
-      }
     };
-  }, [user, backendUrl]);
+
+    socket.on("newNotification", handleNewNotification);
+    return () => socket.off("newNotification", handleNewNotification);
+  }, [socket]);
 
   // Show a full-screen loader during the initial API call
   if (isCheckingAuth) {
@@ -99,8 +85,10 @@ export default function App() {
           <Route index element={<Home />} />
           <Route path="explore" element={<Explore />} />
           <Route path="profile/:username" element={<OtherUser />} />
+          <Route path="post/:id" element={<PostPage />} />
           <Route path="profile/:username/followers" element={<UserListPage />} />
           <Route path="profile/:username/following" element={<UserListPage />} />
+          
 
           {/* Guest-Only Pages (Login / Register) */}
           <Route path="register" element={<GuestRoute user={user}><Register /></GuestRoute>} />

@@ -149,9 +149,9 @@ export default function PostFeed() {
     };
 
     // --- 5. Handle Share ---
-    const handleShare = (username) => {
+    const handleShare = (postId) => {
         // Construct the full URL pointing to this specific post
-        const postUrl = `${window.location.origin}/profile/${username}`;
+        const postUrl = `${window.location.origin}/post/${postId}`;
         
         // Copy to clipboard
         navigator.clipboard.writeText(postUrl)
@@ -276,7 +276,7 @@ export default function PostFeed() {
 
                                 {/* Share Button */}
                                 <button
-                                    onClick={() => handleShare(post.user.username)}
+                                    onClick={() => handleShare(post._id)}
                                     className="flex items-center gap-2 group transition-all cursor-pointer active:scale-90"
                                     title="Share Post"
                                 >

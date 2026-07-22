@@ -1,5 +1,5 @@
 import express from 'express'
-import { addComment, createPost, deletePost, getAllPost, toggleLike } from '../Controller/post.controller.js'
+import { addComment, createPost, deletePost, getAllPost, getPostById, toggleLike } from '../Controller/post.controller.js'
 import { ProtectedRoute } from '../Middleware/ProtectedRoute.js'
 import { upload } from "../utils/cloudinary.js";
 
@@ -11,5 +11,6 @@ router.get("/all", getAllPost);
 router.post("/comment/:id", ProtectedRoute, addComment)
 router.delete("/delete/:id", ProtectedRoute, deletePost)
 
+router.get("/:id", getPostById);
 
 export default router;

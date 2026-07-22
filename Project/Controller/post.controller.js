@@ -257,3 +257,29 @@ export const deletePost = async (req, res) => {
         });
     }
 };
+
+export const getPostById = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const post = await Post.findById(id)
+            .populate("user", "fullname username profileImg")
+            .populate("comments.user", "fullname username profileImg");
+
+        if (!post) {
+            return res.status(404).json({ success: false, message: "Post not found" });
+        }
+
+        return res.status(200).json({ success: true, post });
+
+    } catch (error) {
+        console.log("Error in getPostById controller: ", error.message);
+
+        // Invalid ObjectId format (e.g. malformed/truncated URL) throws a CastError — treat as 404, not 500
+        if (error.name === "CastError") {
+            return res.status(404).json({ success: false, message: "Post not found" });
+        }
+
+        return res.status(500).json({ success: false, message: "Internal server error" });
+    }
+};
